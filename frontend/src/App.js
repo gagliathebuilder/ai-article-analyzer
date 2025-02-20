@@ -14,15 +14,13 @@ const Header = styled.h1`
   margin-bottom: 2rem;
 `;
 
-const InputField = styled.textarea`
+const InputField = styled.input`
   width: 100%;
   padding: 0.75rem;
   font-size: 1rem;
   margin-bottom: 1rem;
   border: 1px solid #ddd;
   border-radius: 4px;
-  min-height: 100px;
-  resize: vertical;
 `;
 
 const Button = styled.button`
@@ -33,30 +31,23 @@ const Button = styled.button`
   font-size: 1rem;
   border-radius: 4px;
   cursor: pointer;
+  margin-right: 1rem;
   &:hover {
     background: #005bb5;
   }
-  &:disabled {
-    background: #cccccc;
-    cursor: not-allowed;
+`;
+
+const ButtonContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+`;
+
+const NewButton = styled(Button)`
+  background: #28a745;
+  &:hover {
+    background: #218838;
   }
-`;
-
-const ErrorMessage = styled.div`
-  color: #dc3545;
-  margin: 1rem 0;
-  padding: 0.5rem;
-  border: 1px solid #dc3545;
-  border-radius: 4px;
-  background-color: #fff8f8;
-`;
-
-const ResultSection = styled.div`
-  margin-top: 2rem;
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: #f8f9fa;
 `;
 
 const SummaryList = styled.ul`
@@ -65,85 +56,69 @@ const SummaryList = styled.ul`
   padding-left: 1.5rem;
 `;
 
-const TextArea = styled.textarea`
-  width: 100%;
-  padding: 0.75rem;
-  margin: 0.5rem 0;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-family: Arial, sans-serif;
-  resize: vertical;
-`;
-
 function App() {
-  const [input, setInput] = useState('');
+  const [url, setUrl] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const handleAnalyze = async () => {
-    if (!input.trim()) {
-      setError('Please enter some text or a URL to analyze');
-      return;
-    }
-
     setLoading(true);
-    setError(null);
-
     try {
-      const response = await axios.post('http://localhost:5001/analyze', { url: input });
+      const response = await axios.post('http://localhost:5001/analyze', { url });
       setResults(response.data);
     } catch (error) {
-      console.error('Error analyzing content:', error);
-      setError(
-        error.response?.data?.message || 
-        'There was an error processing your request. Please try again.'
-      );
-    } finally {
-      setLoading(false);
+      console.error('Error analyzing article:', error);
+      alert('There was an error processing the article.');
     }
+    setLoading(false);
+  };
+
+  const handleNew = () => {
+    setUrl('');
+    setResults(null);
+    setLoading(false);
   };
 
   return (
     <Container>
       <Header>AI Article Analyzer</Header>
       <InputField 
+        type="text" 
         placeholder="Enter article URL or paste text here..."
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
       />
-      <Button 
-        onClick={handleAnalyze} 
-        disabled={loading || !input.trim()}
-      >
-        {loading ? 'Analyzing...' : 'Analyze Content'}
-      </Button>
-
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-
+      <ButtonContainer>
+        <Button onClick={handleAnalyze}>
+          {loading ? 'Analyzing...' : 'Analyze Article'}
+        </Button>
+        {results && (
+          <NewButton onClick={handleNew}>
+            New Analysis
+          </NewButton>
+        )}
+      </ButtonContainer>
       {results && (
-        <ResultSection>
+        <div>
           <h2>Summary</h2>
           <SummaryList>
             {results.summary.map((point, index) => (
               <li key={index}>{point}</li>
             ))}
           </SummaryList>
-          
           <h3>Email Draft</h3>
-          <TextArea 
+          <textarea 
+            style={{ width: '100%', height: '150px' }} 
             value={results.emailDraft} 
             readOnly 
-            rows={8}
           />
-          
           <h3>Social Media Post</h3>
-          <TextArea 
+          <textarea 
+            style={{ width: '100%', height: '100px' }} 
             value={results.socialPost} 
             readOnly 
-            rows={4}
           />
-        </ResultSection>
+        </div>
       )}
     </Container>
   );
