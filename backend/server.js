@@ -25,9 +25,12 @@ async function analyzeArticle(text) {
   try {
     const systemPrompt = `You are an AI assistant that analyzes articles and provides:
 1. A summary in 3 key points
-2. A draft email to share the article
+2. A draft email to share the article (maintain proper email formatting with line breaks and spacing)
 3. A social media post about the article
 4. An engaging subject line for the email that maximizes open rates while maintaining context
+
+For the subject line: provide ONLY the text without any prefix like "Subject:" or quotes. Keep it under 60 characters.
+For the email draft: include proper formatting with paragraphs and line breaks.
 
 Please format your response in JSON with keys: summary (array), emailDraft (string), socialPost (string), and subjectLine (string).`;
 
@@ -41,11 +44,16 @@ Please format your response in JSON with keys: summary (array), emailDraft (stri
     });
 
     const aiResponse = JSON.parse(response.choices[0].message.content);
+    
+    // Clean up only the subject line, preserve email formatting
     return {
       summary: aiResponse.summary || [],
-      emailDraft: aiResponse.emailDraft || '',
+      emailDraft: aiResponse.emailDraft?.trim() || '',  // Just trim whitespace for email
       socialPost: aiResponse.socialPost || '',
-      subjectLine: aiResponse.subjectLine || ''
+      subjectLine: (aiResponse.subjectLine || '')
+        .replace(/^["']|["']$/g, '')
+        .replace(/^(?:subject:|Subject:)\s*/i, '')
+        .trim()
     };
   } catch (error) {
     console.error('Error in AI analysis:', error);
@@ -91,17 +99,27 @@ app.post('/generate-subject', async (req, res) => {
       messages: [
         {
           role: "system",
-          content: `You are an expert email marketer. Your task is to generate a compelling subject line that will maximize open rates while maintaining the context and integrity of the email content. The subject line should be attention-grabbing, specific, and honest - no clickbait. Keep it under 60 characters for optimal display across email clients.`
+          content: `You are an expert email marketer. Generate ONLY a compelling subject line text (no "Subject:" prefix or quotes). The subject line should:
+- Maximize open rates while maintaining context
+- Be attention-grabbing and specific
+- Be honest (no clickbait)
+- Be under 60 characters for optimal display
+- NOT include any prefix like "Subject:" or quotes`
         },
         {
           role: "user",
-          content: `Please generate a high-converting subject line for this email content: ${emailContent}${originalUrl ? `\n\nOriginal article URL: ${originalUrl}` : ''}`
+          content: `Generate a high-converting subject line for this email content: ${emailContent}${originalUrl ? `\n\nOriginal article URL: ${originalUrl}` : ''}`
         }
       ],
       temperature: 0.7,
     });
 
-    const subjectLine = response.choices[0].message.content.replace(/^["']|["']$/g, '');
+    // Clean up the response to remove any "Subject:" prefix and quotes
+    let subjectLine = response.choices[0].message.content
+      .replace(/^["']|["']$/g, '') // Remove surrounding quotes
+      .replace(/^(?:subject:|Subject:)\s*/i, '') // Remove any "Subject:" prefix case-insensitive
+      .trim();
+    
     res.json({ subjectLine });
   } catch (error) {
     console.error('Error generating subject line:', error);
