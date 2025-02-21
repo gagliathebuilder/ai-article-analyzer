@@ -27,8 +27,9 @@ async function analyzeArticle(text) {
 1. A summary in 3 key points
 2. A draft email to share the article
 3. A social media post about the article
+4. An engaging subject line for the email that maximizes open rates while maintaining context
 
-Please format your response in JSON with keys: summary (array), emailDraft (string), and socialPost (string).`;
+Please format your response in JSON with keys: summary (array), emailDraft (string), socialPost (string), and subjectLine (string).`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -43,7 +44,8 @@ Please format your response in JSON with keys: summary (array), emailDraft (stri
     return {
       summary: aiResponse.summary || [],
       emailDraft: aiResponse.emailDraft || '',
-      socialPost: aiResponse.socialPost || ''
+      socialPost: aiResponse.socialPost || '',
+      subjectLine: aiResponse.subjectLine || ''
     };
   } catch (error) {
     console.error('Error in AI analysis:', error);
@@ -67,6 +69,44 @@ app.post('/analyze', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: 'Failed to analyze article',
+      message: error.message
+    });
+  }
+});
+
+// Add new endpoint for subject line generation
+app.post('/generate-subject', async (req, res) => {
+  const { emailContent, originalUrl } = req.body;
+
+  if (!emailContent) {
+    return res.status(400).json({
+      error: 'Invalid input',
+      message: 'Please provide email content'
+    });
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert email marketer. Your task is to generate a compelling subject line that will maximize open rates while maintaining the context and integrity of the email content. The subject line should be attention-grabbing, specific, and honest - no clickbait. Keep it under 60 characters for optimal display across email clients.`
+        },
+        {
+          role: "user",
+          content: `Please generate a high-converting subject line for this email content: ${emailContent}${originalUrl ? `\n\nOriginal article URL: ${originalUrl}` : ''}`
+        }
+      ],
+      temperature: 0.7,
+    });
+
+    const subjectLine = response.choices[0].message.content.replace(/^["']|["']$/g, '');
+    res.json({ subjectLine });
+  } catch (error) {
+    console.error('Error generating subject line:', error);
+    res.status(500).json({
+      error: 'Failed to generate subject line',
       message: error.message
     });
   }
