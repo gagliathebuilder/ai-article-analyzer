@@ -131,17 +131,93 @@ const CopySuccess = styled.span`
   transition: opacity 0.2s ease;
 `;
 
+const ToggleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+`;
+
+const ToggleLabel = styled.label`
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  color: #2c3e50;
+  font-size: 0.9rem;
+`;
+
+const ToggleSwitch = styled.div`
+  position: relative;
+  width: 40px;
+  height: 20px;
+  background: ${props => props.checked ? '#28a745' : '#ddd'};
+  border-radius: 20px;
+  padding: 2px;
+  transition: background 0.2s ease;
+  margin-right: 8px;
+  cursor: pointer;
+
+  &:before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+    transform: translateX(${props => props.checked ? '20px' : '0'});
+  }
+`;
+
+const EmojiSuggestions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+`;
+
+const EmojiButton = styled.button`
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+
+  &:hover {
+    background: #f1f1f1;
+    transform: scale(1.1);
+  }
+`;
+
 function App() {
   const [url, setUrl] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [copyStatus, setCopyStatus] = useState({ email: false, social: false });
+  const [emojisEnabled, setEmojisEnabled] = useState(true);
+  const [emojiSuggestions, setEmojiSuggestions] = useState({ email: [], social: [] });
 
   const handleAnalyze = async () => {
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:5001/analyze', { url });
+      const response = await axios.post('http://localhost:5001/analyze', { 
+        url,
+        includeEmojis: emojisEnabled 
+      });
       setResults(response.data);
+      
+      // Set emoji suggestions if enabled
+      if (emojisEnabled && response.data.emojiSuggestions) {
+        setEmojiSuggestions(response.data.emojiSuggestions);
+      } else {
+        setEmojiSuggestions({ email: [], social: [] });
+      }
     } catch (error) {
       console.error('Error analyzing article:', error);
       alert('There was an error processing the article.');
@@ -154,6 +230,7 @@ function App() {
     setResults(null);
     setLoading(false);
     setCopyStatus({ email: false, social: false });
+    setEmojiSuggestions({ email: [], social: [] });
   };
 
   const handleCopy = async (text, type) => {
@@ -168,6 +245,85 @@ function App() {
     }
   };
 
+  const insertEmoji = (emoji, type) => {
+    const text = results[type === 'email' ? 'emailDraft' : 'socialPost'];
+    let newText;
+
+    // Smart placement rules
+    if (type === 'email') {
+      // For email, place emoji after the greeting or subject
+      const lines = text.split('\n');
+      if (lines[0].toLowerCase().includes('subject:')) {
+        // Add after subject line
+        lines[0] = `${lines[0]} ${emoji}`;
+        newText = lines.join('\n');
+      } else {
+        // Add after first greeting line
+        const firstLineEnd = text.indexOf('\n');
+        if (firstLineEnd !== -1) {
+          newText = text.slice(0, firstLineEnd) + ` ${emoji}` + text.slice(firstLineEnd);
+        } else {
+          newText = `${text} ${emoji}`;
+        }
+      }
+    } else {
+      // For social post, add emoji at strategic positions
+      const sentences = text.split('. ');
+      if (sentences.length > 1) {
+        // Add emoji after the first sentence for emphasis
+        sentences[0] = `${sentences[0]} ${emoji}`;
+        newText = sentences.join('. ');
+      } else {
+        // If it's a single sentence, add at the beginning
+        newText = `${emoji} ${text}`;
+      }
+    }
+
+    setResults(prev => ({
+      ...prev,
+      [type === 'email' ? 'emailDraft' : 'socialPost']: newText
+    }));
+  };
+
+  const previewEmoji = (emoji, type) => {
+    const textArea = document.querySelector(`textarea[data-type="${type}"]`);
+    if (textArea) {
+      // Create or update preview element
+      let preview = document.querySelector(`#emoji-preview-${type}`);
+      if (!preview) {
+        preview = document.createElement('div');
+        preview.id = `emoji-preview-${type}`;
+        preview.style.position = 'absolute';
+        preview.style.left = '0';
+        preview.style.bottom = '-30px'; // Position below the textarea
+        preview.style.background = 'rgba(44, 62, 80, 0.95)'; // Darker background for better visibility
+        preview.style.color = 'white'; // White text for contrast
+        preview.style.padding = '8px 12px';
+        preview.style.borderRadius = '4px';
+        preview.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        preview.style.fontSize = '0.9rem';
+        preview.style.zIndex = '100';
+        preview.style.width = 'fit-content';
+        textArea.parentNode.style.position = 'relative'; // Ensure parent has relative positioning
+        textArea.parentNode.appendChild(preview);
+      }
+      
+      const previewText = type === 'email' 
+        ? `Will add ${emoji} after greeting/subject`
+        : `Will add ${emoji} ${type === 'social' ? 'at the start of the post' : ''}`;
+      
+      preview.textContent = previewText;
+      preview.style.display = 'block';
+    }
+  };
+
+  const hideEmojiPreview = (type) => {
+    const preview = document.querySelector(`#emoji-preview-${type}`);
+    if (preview) {
+      preview.style.display = 'none';
+    }
+  };
+
   return (
     <Container>
       <Header>AI Article Analyzer</Header>
@@ -177,6 +333,15 @@ function App() {
         value={url}
         onChange={(e) => setUrl(e.target.value)}
       />
+      <ToggleContainer>
+        <ToggleLabel>
+          <ToggleSwitch 
+            checked={emojisEnabled}
+            onClick={() => setEmojisEnabled(!emojisEnabled)}
+          />
+          Enable Emoji Suggestions 🎯
+        </ToggleLabel>
+      </ToggleContainer>
       <ButtonContainer>
         <Button onClick={handleAnalyze}>
           {loading ? 'Analyzing...' : 'Analyze Article'}
@@ -210,7 +375,22 @@ function App() {
               value={results.emailDraft} 
               readOnly 
               rows={8}
+              data-type="email"
             />
+            {emojisEnabled && emojiSuggestions.email?.length > 0 && (
+              <EmojiSuggestions>
+                {emojiSuggestions.email.map((emoji, index) => (
+                  <EmojiButton 
+                    key={index}
+                    onClick={() => insertEmoji(emoji, 'email')}
+                    onMouseEnter={() => previewEmoji(emoji, 'email')}
+                    onMouseLeave={() => hideEmojiPreview('email')}
+                  >
+                    {emoji}
+                  </EmojiButton>
+                ))}
+              </EmojiSuggestions>
+            )}
           </TextAreaContainer>
 
           <TextAreaContainer>
@@ -227,7 +407,22 @@ function App() {
               value={results.socialPost} 
               readOnly 
               rows={4}
+              data-type="social"
             />
+            {emojisEnabled && emojiSuggestions.social?.length > 0 && (
+              <EmojiSuggestions>
+                {emojiSuggestions.social.map((emoji, index) => (
+                  <EmojiButton 
+                    key={index}
+                    onClick={() => insertEmoji(emoji, 'social')}
+                    onMouseEnter={() => previewEmoji(emoji, 'social')}
+                    onMouseLeave={() => hideEmojiPreview('social')}
+                  >
+                    {emoji}
+                  </EmojiButton>
+                ))}
+              </EmojiSuggestions>
+            )}
           </TextAreaContainer>
         </ResultsContainer>
       )}

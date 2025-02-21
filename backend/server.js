@@ -21,14 +21,17 @@ app.get('/', (req, res) => {
   res.json({ status: 'Server is running' });
 });
 
-async function analyzeArticle(text) {
+async function analyzeArticle(text, includeEmojis = true) {
   try {
     const systemPrompt = `You are an AI assistant that analyzes articles and provides:
 1. A summary in 3 key points
 2. A draft email to share the article
 3. A social media post about the article
+${includeEmojis ? `4. Suggest 3-5 relevant emojis for both the email and social post, considering the content's tone and subject matter.
 
-Please format your response in JSON with keys: summary (array), emailDraft (string), and socialPost (string).`;
+For emoji suggestions, provide them in a separate JSON array format under emojiSuggestions with "email" and "social" arrays.` : ''}
+
+Please format your response in JSON with keys: summary (array), emailDraft (string), socialPost (string)${includeEmojis ? ', emojiSuggestions (object with email and social arrays)' : ''}.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -43,7 +46,8 @@ Please format your response in JSON with keys: summary (array), emailDraft (stri
     return {
       summary: aiResponse.summary || [],
       emailDraft: aiResponse.emailDraft || '',
-      socialPost: aiResponse.socialPost || ''
+      socialPost: aiResponse.socialPost || '',
+      emojiSuggestions: includeEmojis ? (aiResponse.emojiSuggestions || { email: [], social: [] }) : undefined
     };
   } catch (error) {
     console.error('Error in AI analysis:', error);
@@ -52,7 +56,7 @@ Please format your response in JSON with keys: summary (array), emailDraft (stri
 }
 
 app.post('/analyze', async (req, res) => {
-  const { url } = req.body;
+  const { url, includeEmojis } = req.body;
   
   if (!url || url.trim().length === 0) {
     return res.status(400).json({
@@ -62,7 +66,7 @@ app.post('/analyze', async (req, res) => {
   }
 
   try {
-    const analysisResult = await analyzeArticle(url.trim());
+    const analysisResult = await analyzeArticle(url.trim(), includeEmojis);
     res.json(analysisResult);
   } catch (error) {
     res.status(500).json({
