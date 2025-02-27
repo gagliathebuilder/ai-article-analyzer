@@ -24,22 +24,30 @@ app.get('/', (req, res) => {
 async function analyzeArticle(text, includeEmojis = true) {
   try {
     const systemPrompt = `You are an AI assistant that analyzes articles and provides:
-1. A summary in 3 key points
+1. A summary in 3-5 key points that accurately reflect the most important factual information in the article
 2. A draft email to share the article
 3. A social media post about the article
 ${includeEmojis ? `4. Suggest 3-5 relevant emojis for both the email and social post, considering the content's tone and subject matter.
 
 For emoji suggestions, provide them in a separate JSON array format under emojiSuggestions with "email" and "social" arrays.` : ''}
 
+When creating the summary:
+- Focus on extracting ONLY facts and information explicitly stated in the article
+- Include specific numbers, percentages, dates, and statistics exactly as reported
+- Do not add any interpretations or conclusions that aren't directly in the article
+- Double-check your summary against the article for factual accuracy
+- Prioritize the most important and noteworthy information
+- Make sure each point is specific and substantive, not general observations
+
 Please format your response in JSON with keys: summary (array), emailDraft (string), socialPost (string)${includeEmojis ? ', emojiSuggestions (object with email and social arrays)' : ''}.`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4-turbo",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: `Please analyze this article: ${text}` }
       ],
-      temperature: 0.7,
+      temperature: 0.5,
     });
 
     const aiResponse = JSON.parse(response.choices[0].message.content);
