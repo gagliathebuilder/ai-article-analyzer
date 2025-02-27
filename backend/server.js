@@ -31,13 +31,18 @@ ${includeEmojis ? `4. Suggest 3-5 relevant emojis for both the email and social 
 
 For emoji suggestions, provide them in a separate JSON array format under emojiSuggestions with "email" and "social" arrays.` : ''}
 
-When creating the summary:
-- Focus on extracting ONLY facts and information explicitly stated in the article
-- Include specific numbers, percentages, dates, and statistics exactly as reported
-- Do not add any interpretations or conclusions that aren't directly in the article
-- Double-check your summary against the article for factual accuracy
-- Prioritize the most important and noteworthy information
-- Make sure each point is specific and substantive, not general observations
+CRITICAL REQUIREMENTS FOR SUMMARY CREATION:
+- ONLY include information that is EXPLICITLY stated in the article - no exceptions
+- NEVER add interpretations, predictions, or industry trends unless they are directly quoted in the article
+- ALWAYS include specific numbers, percentages, and statistics exactly as they appear in the article
+- Include exact quotations from key figures mentioned in the article
+- AVOID generic or vague statements that could apply to any company in the industry
+- If the article mentions specific time periods (months, quarters, years), include them exactly
+- VERIFY each summary point against the article text before finalizing
+- PRIORITIZE information from the first 3-4 paragraphs as they typically contain the most critical facts
+
+Example of GOOD summary point: "Magnite reported a 4% year-over-year growth in Q4 2024, earning $194 million with $36 million in profit, up from $31 million a year before."
+Example of BAD summary point: "Magnite's market positioning remains strong, indicating resilience in its business model." (too vague, not supported by specific facts)
 
 Please format your response in JSON with keys: summary (array), emailDraft (string), socialPost (string)${includeEmojis ? ', emojiSuggestions (object with email and social arrays)' : ''}.`;
 
@@ -47,7 +52,7 @@ Please format your response in JSON with keys: summary (array), emailDraft (stri
         { role: "system", content: systemPrompt },
         { role: "user", content: `Please analyze this article: ${text}` }
       ],
-      temperature: 0.5,
+      temperature: 0.3,
     });
 
     const aiResponse = JSON.parse(response.choices[0].message.content);
