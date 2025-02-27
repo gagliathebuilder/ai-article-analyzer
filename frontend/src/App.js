@@ -100,10 +100,12 @@ function App() {
     setLoading(true);
     try {
       // First, if it's a video, fetch metadata
+      let metadata = null;
       if (contentType === 'video' && url) {
         try {
           const metadataResponse = await axios.post('http://localhost:5001/video-metadata', { url });
-          setVideoMetadata(metadataResponse.data);
+          metadata = metadataResponse.data;
+          setVideoMetadata(metadata);
         } catch (error) {
           console.error('Error fetching video metadata:', error);
           alert('Unable to fetch video metadata. Please check the URL.');
@@ -116,7 +118,7 @@ function App() {
       const response = await axios.post('http://localhost:5001/analyze', { 
         url,
         contentType,
-        videoMetadata: contentType === 'video' ? videoMetadata : undefined
+        videoMetadata: contentType === 'video' ? metadata : undefined
       });
       setResults(response.data);
     } catch (error) {
