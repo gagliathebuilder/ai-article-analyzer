@@ -89,26 +89,33 @@ const VideoMetadata = styled.div`
   color: #666;
 `;
 
+const PodcastPreview = styled(VideoPreview)``;
+
+const PodcastMetadata = styled(VideoMetadata)``;
+
 function App() {
   const [url, setUrl] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [contentType, setContentType] = useState('article'); // 'article' or 'video'
-  const [videoMetadata, setVideoMetadata] = useState(null);
+  const [contentType, setContentType] = useState('article'); // 'article', 'video', or 'podcast'
+  const [mediaMetadata, setMediaMetadata] = useState(null);
 
   const handleAnalyze = async () => {
     setLoading(true);
     try {
-      // First, if it's a video, fetch metadata
+      // First, if it's a video or podcast, fetch metadata
       let metadata = null;
-      if (contentType === 'video' && url) {
+      if ((contentType === 'video' || contentType === 'podcast') && url) {
         try {
-          const metadataResponse = await axios.post('http://localhost:5001/video-metadata', { url });
+          const metadataResponse = await axios.post('http://localhost:5001/media-metadata', { 
+            url,
+            type: contentType 
+          });
           metadata = metadataResponse.data;
-          setVideoMetadata(metadata);
+          setMediaMetadata(metadata);
         } catch (error) {
-          console.error('Error fetching video metadata:', error);
-          alert('Unable to fetch video metadata. Please check the URL.');
+          console.error('Error fetching metadata:', error);
+          alert(`Unable to fetch ${contentType} metadata. Please check the URL.`);
           setLoading(false);
           return;
         }
@@ -118,7 +125,7 @@ function App() {
       const response = await axios.post('http://localhost:5001/analyze', { 
         url,
         contentType,
-        videoMetadata: contentType === 'video' ? metadata : undefined
+        mediaMetadata: (contentType === 'video' || contentType === 'podcast') ? metadata : undefined
       });
       setResults(response.data);
     } catch (error) {
@@ -132,7 +139,7 @@ function App() {
     setUrl('');
     setResults(null);
     setLoading(false);
-    setVideoMetadata(null);
+    setMediaMetadata(null);
   };
 
   const isValidUrl = (url) => {
@@ -146,13 +153,22 @@ function App() {
 
   const getUrlType = (url) => {
     if (!isValidUrl(url)) return null;
+    
     const videoPatterns = [
       /youtube\.com\/watch\?v=/, 
       /youtu\.be\//, 
       /vimeo\.com\//, 
       /dailymotion\.com\/video\//
     ];
-    return videoPatterns.some(pattern => pattern.test(url)) ? 'video' : 'article';
+    
+    const podcastPatterns = [
+      /open\.spotify\.com\/episode\//, 
+      /podcasts\.apple\.com.*\/podcast\//
+    ];
+    
+    if (videoPatterns.some(pattern => pattern.test(url))) return 'video';
+    if (podcastPatterns.some(pattern => pattern.test(url))) return 'podcast';
+    return 'article';
   };
 
   const handleUrlChange = (e) => {
@@ -183,25 +199,36 @@ function App() {
         >
           Video
         </Tab>
+        <Tab 
+          active={contentType === 'podcast'} 
+          onClick={() => setContentType('podcast')}
+        >
+          Podcast
+        </Tab>
       </TabContainer>
 
       <InputField 
         type="text" 
-        placeholder={contentType === 'video' ? 
-          "Enter video URL (YouTube, Vimeo, etc.)..." : 
-          "Enter article URL or paste text here..."}
+        placeholder={
+          contentType === 'video' ? "Enter video URL (YouTube, Vimeo, etc.)..." :
+          contentType === 'podcast' ? "Enter podcast URL (Spotify, Apple Podcasts)..." :
+          "Enter article URL or paste text here..."
+        }
         value={url}
         onChange={handleUrlChange}
       />
 
-      {contentType === 'video' && videoMetadata && (
+      {(contentType === 'video' || contentType === 'podcast') && mediaMetadata && (
         <VideoPreview>
-          <h4>{videoMetadata.title}</h4>
+          <h4>{mediaMetadata.title}</h4>
           <VideoMetadata>
-            <div>Duration: {videoMetadata.duration}</div>
-            <div>Channel: {videoMetadata.channel}</div>
-            {videoMetadata.description && (
-              <div>Description: {videoMetadata.description.substring(0, 150)}...</div>
+            <div>Duration: {mediaMetadata.duration}</div>
+            <div>{contentType === 'podcast' ? 'Show' : 'Channel'}: {mediaMetadata.channel}</div>
+            {mediaMetadata.description && (
+              <div>Description: {mediaMetadata.description.substring(0, 150)}...</div>
+            )}
+            {contentType === 'podcast' && mediaMetadata.episodeNumber && (
+              <div>Episode: {mediaMetadata.episodeNumber}</div>
             )}
           </VideoMetadata>
         </VideoPreview>
