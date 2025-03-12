@@ -195,6 +195,23 @@ const EmojiButton = styled.button`
   }
 `;
 
+const ThemeContainer = styled.div`
+  margin-bottom: 20px;
+`;
+
+const ThemeTitle = styled.h3`
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #2c3e50;
+`;
+
+const SubPointsList = styled.ul`
+  list-style-type: disc;
+  margin-left: 20px;
+  margin-bottom: 15px;
+`;
+
 function App() {
   const [url, setUrl] = useState('');
   const [results, setResults] = useState(null);
@@ -354,10 +371,17 @@ function App() {
       </ButtonContainer>
       {results && (
         <ResultsContainer>
-          <SectionTitle>Key Points Summary</SectionTitle>
+          <SectionTitle>Thematic Analysis</SectionTitle>
           <SummaryList>
-            {results.summary.map((point, index) => (
-              <li key={index}>{point}</li>
+            {results.thematicAnalysis.map((theme, index) => (
+              <ThemeContainer key={index}>
+                <ThemeTitle>{theme.mainPoint}</ThemeTitle>
+                <SubPointsList>
+                  {theme.subPoints.map((subPoint, subIndex) => (
+                    <li key={`${index}-${subIndex}`}>{subPoint}</li>
+                  ))}
+                </SubPointsList>
+              </ThemeContainer>
             ))}
           </SummaryList>
 
