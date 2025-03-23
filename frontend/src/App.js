@@ -373,15 +373,8 @@ function App() {
         <ResultsContainer>
           <SectionTitle>Thematic Analysis</SectionTitle>
           <SummaryList>
-            {results.thematicAnalysis.map((theme, index) => (
-              <ThemeContainer key={index}>
-                <ThemeTitle>{theme.mainPoint}</ThemeTitle>
-                <SubPointsList>
-                  {theme.subPoints.map((subPoint, subIndex) => (
-                    <li key={`${index}-${subIndex}`}>{subPoint}</li>
-                  ))}
-                </SubPointsList>
-              </ThemeContainer>
+            {results.summary.map((point, index) => (
+              <li key={index}>{point}</li>
             ))}
           </SummaryList>
 
