@@ -5,7 +5,7 @@ const OpenAI = require('openai');
 require('dotenv').config();
 
 const app = express();
-const PORT = 3000;
+const PORT = 5001;
 
 // Middleware
 app.use(cors());
@@ -24,10 +24,12 @@ app.get('/', (req, res) => {
 async function analyzeArticle(text, includeEmojis = true) {
   try {
     const systemPrompt = `You are an AI assistant that analyzes articles and provides:
-1. A summary in 3-5 key points that accurately reflect the most important factual information in the article
+1. A comprehensive summary in 5-7 key points that accurately reflect the most important factual information in the article
 2. A draft email to share the article
 3. A social media post about the article
-${includeEmojis ? `4. Suggest 3-5 relevant emojis for both the email and social post, considering the content's tone and subject matter.
+4. A video script outline for a 2-3 minute video about the article
+5. A podcast script outline for both Apple Podcasts and Spotify formats
+${includeEmojis ? `6. Suggest 3-5 relevant emojis for both the email and social post, considering the content's tone and subject matter.
 
 For emoji suggestions, provide them in a separate JSON array format under emojiSuggestions with "email" and "social" arrays.` : ''}
 
@@ -40,11 +42,30 @@ CRITICAL REQUIREMENTS FOR SUMMARY CREATION:
 - If the article mentions specific time periods (months, quarters, years), include them exactly
 - VERIFY each summary point against the article text before finalizing
 - PRIORITIZE information from the first 3-4 paragraphs as they typically contain the most critical facts
+- Include any relevant industry context or background information mentioned in the article
+- Note any significant implications or consequences explicitly stated in the article
 
 Example of GOOD summary point: "Magnite reported a 4% year-over-year growth in Q4 2024, earning $194 million with $36 million in profit, up from $31 million a year before."
 Example of BAD summary point: "Magnite's market positioning remains strong, indicating resilience in its business model." (too vague, not supported by specific facts)
 
-Please format your response in JSON with keys: summary (array), emailDraft (string), socialPost (string)${includeEmojis ? ', emojiSuggestions (object with email and social arrays)' : ''}.`;
+For the video script:
+- Create a compelling hook
+- Break down complex information into digestible segments
+- Include visual suggestions for key points
+- End with a clear call to action
+
+For the podcast scripts:
+- Apple Podcasts format: Focus on storytelling and engagement
+- Spotify format: Include music suggestions and sound effects
+- Both should maintain a conversational tone while being informative
+
+Please format your response in JSON with keys: 
+- summary (array)
+- emailDraft (string)
+- socialPost (string)
+- videoScript (object with sections: hook, mainPoints, conclusion)
+- podcastScripts (object with apple and spotify formats)
+${includeEmojis ? '- emojiSuggestions (object with email and social arrays)' : ''}`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4-turbo",
@@ -60,6 +81,15 @@ Please format your response in JSON with keys: summary (array), emailDraft (stri
       summary: aiResponse.summary || [],
       emailDraft: aiResponse.emailDraft || '',
       socialPost: aiResponse.socialPost || '',
+      videoScript: aiResponse.videoScript || {
+        hook: '',
+        mainPoints: [],
+        conclusion: ''
+      },
+      podcastScripts: aiResponse.podcastScripts || {
+        apple: '',
+        spotify: ''
+      },
       emojiSuggestions: includeEmojis ? (aiResponse.emojiSuggestions || { email: [], social: [] }) : undefined
     };
   } catch (error) {
