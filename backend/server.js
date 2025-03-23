@@ -5,7 +5,7 @@ const OpenAI = require('openai');
 require('dotenv').config();
 
 const app = express();
-const PORT = 5001;
+const PORT = 3000;
 
 // Middleware
 app.use(cors());
